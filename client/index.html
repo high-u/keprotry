@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.css">
+
+<script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.7.0/dist/alpine.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@ryangjchandler/spruce@2.x.x/dist/spruce.umd.js"></script>
+
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/1.30.1/date_fns.min.js" integrity="sha512-F+u8eWHrfY8Xw9BLzZ8rG/0wIvs0y+JyRJrXjp3VjtFPylAEEGwKbua5Ip/oiVhaTDaDs4eU2Xtsxjs/9ag2bQ==" crossorigin="anonymous"></script>
+
+<link href="https://fonts.googleapis.com/css?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Two+Tone|Material+Icons+Round|Material+Icons+Sharp" rel="stylesheet">
+
+<link rel="stylesheet" href="./app.css">
+<style>
+html {
+  background-color: #F5F5F5;
+}
+.container {
+  width: 100%;
+  margin: 1em 0;
+  /* overflow: auto; */
+  /* border: 1px solid #d8d8d8; */
+  /* background-color: #fff; */
+}
+
+/* custom frappe-gant class */
+.gantt {
+  margin-top: 3em;
+}
+text.bar-label {
+  font-family: sans-serif;
+}
+
+</style>
+
+</head>
+<body>
+
+  <div x-data="toRoom()" x-init="init()">
+    <template x-if="$store.page.name === 'toRoom'">
+      <div>
+        <span><label for="roomkey">Room Key</label><input type="text" x-model="$store.room.key" id="roomKey" /></span>
+        <span><label for="username">Username</label><input type="text" x-model="$store.room.username" id="username" /></span>
+        <button @click="toKpt()">Enter</button>
+      </div>
+    </template>
+  </div>
+
+  <div x-data="keprotry()" x-init="init()">
+    <template x-if="$store.page.name === 'KPT'">
+      <div>
+        <div x-text="$store.room.key"></div>
+        <div x-text="$store.room.username"></div>
+        
+        <div>
+          <div>
+            <input type="text" x-model="newKeepMessage" placeholder="I need to..." @keydown.enter="sendMessage('keep')">
+          </div>
+          <div>
+            <template x-for="(message, index) in $store.room.messages" :key="message.id">
+              <div>
+                <template x-if="message.lane_name === 'keep'">
+                  <div>
+                    <span @click="deleteMessage(message.id)">×</span><span x-text="message.message"></span>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </div>
+        <div>
+          <div>
+            <input type="text" x-model="newProblemMessage" placeholder="I need to..." @keydown.enter="sendMessage('problem')">
+          </div>
+          <div>
+            <template x-for="(message, index) in $store.room.messages" :key="message.id">
+              <div>
+                <template x-if="message.lane_name === 'problem'">
+                  <div>
+                    <span @click="deleteMessage(message.id)">×</span><span x-text="message.message"></span>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </div>
+        <div>
+          <div>
+            <input type="text" x-model="newTryMessage" placeholder="I need to..." @keydown.enter="sendMessage('try')">
+          </div>
+          <div>
+            <template x-for="(message, index) in $store.room.messages" :key="message.id">
+              <div>
+                <template x-if="message.lane_name === 'try'">
+                  <div>
+                    <span @click="deleteMessage(message.id)">×</span><span x-text="message.message"></span>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+<script>
+// @ts-check
+"use strict";
+
+const API_URL = "http://localhost:8080/v1/graphql"
+
+function toRoom() {
+  return {
+    init() {
+    },
+    async toKpt() {
+      if (this.$store.room.key !== "" && this.$store.room.username !== "") {
+        this.$store.page.name = "KPT"
+
+        const roomKey = this.$store.room.key
+        const wsClient = new WebSocket("ws://localhost:8080/v1/graphql", "graphql-ws")
+        // const wsClient = this.$store.room.ws
+        wsClient.onopen = function (event) {
+          console.log("open")
+
+          let serializedMessage = JSON.stringify({
+            id: "01020304-0506-4708-890a-0b0c0d0e0f11",
+            type: "connection_init"
+          })
+
+          wsClient.send(serializedMessage)
+          console.log("send1", roomKey)
+
+          const query = `
+          subscription subPost2 {
+            post (order_by: {received_at:asc}, where: {room_key: {_eq: "${roomKey}"}}) {
+              id
+              username
+              message
+              received_at
+              lane_name
+            }
+          }
+          `
+          let serializedMessage2 = JSON.stringify({
+            id: "01020304-0506-4708-890a-0b0c0d0e0f11",
+            type: "start",
+            payload: {
+              "operationName": null,
+              "query": query,
+              // "variables":{
+              //   room_key: roomKey
+              // }
+            }
+          })
+          wsClient.send(serializedMessage2)
+          console.log("send2", serializedMessage2)
+        }
+        let msg = this.$store.room.messages
+        wsClient.onmessage = function (event) {
+          console.log("event.data", event.data)
+
+          const data = JSON.parse(event.data)
+          console.log("data.type", data.type)
+          if (data.type === "data") {
+            console.log({msg})
+            const msgNotExist = data.payload.data.post.filter(e => {
+              const result = msg.find(el => {
+                return (e.id === el.id)
+              })
+              return (typeof result === "undefined")
+            })
+            console.log({msgNotExist})
+
+            msgNotExist.forEach(element => {
+              msg.unshift({
+                id: element.id,
+                message: element.message,
+                room_key: element.room_key,
+                lane_name: element.lane_name
+              })
+            })
+          }
+        }
+
+      }
+    }
+  }
+}
+
+function keprotry() {
+  return {
+    roomKey: "",
+    username: "",
+    newKeepMessage: "",
+    newProblemMessage: "",
+    newTryMessage: "",
+    init() {
+    },
+    async sendMessage(laneName) {
+      // @ts-ignore
+      const nowUnixtime = dateFns.format(new Date(), 'YYYY-MM-DDTHH:mm:ss.SSS')
+
+      const createMessage = `
+      mutation createPost($message: String = "", $room_key: String = "", $username: String = "", $lane_name: String = "") {
+        insert_post_one(object: {message: $message, room_key: $room_key, username: $username, lane_name: $lane_name}) {
+          id
+        }
+      }
+      `
+
+      let m = ""
+      switch (laneName) {
+        case "keep":
+          m = this.newKeepMessage
+          break
+        case "problem":
+          m = this.newProblemMessage
+          break
+        case "try":
+          m = this.newTryMessage
+          break
+      }
+
+      const body = {
+        "query": createMessage,
+        "variables": {
+          message: m,
+          room_key: this.$store.room.key,
+          username: this.$store.room.username,
+          lane_name: laneName
+        }
+      }
+      console.log(body)
+
+      // @ts-ignore
+      const data = await axios.post(API_URL, body, {
+          headers: {
+            "Content-Type": "application/json"
+          }
+      })
+      console.log(data)
+
+      this.newKeepMessage = "";
+      this.newProblemMessage = "";
+      this.newTryMessage = "";
+    },
+    async deleteMessage (id) {
+      // UI から削除
+      // ここで制御ではなく、onmessage 内の filter 使っているあたりで一緒にできると良いのかも
+      this.messages = this.messages.filter(e => e.id !== id)
+      // DB から削除
+      console.log({id})
+      const deletePost = `
+      mutation deletePost {
+        delete_post_by_pk(
+          id: ${id}
+        ) {
+          id
+        }
+      }
+      `
+      const body = {
+        "query": deletePost
+      }
+      // @ts-ignore
+      const data = await axios.post(API_URL, body, {
+          headers: {
+            "Content-Type": "application/json"
+          }
+      })
+    }
+  }
+}
+
+// @ts-ignore
+window.Spruce.store("room", {
+  key: "",
+  username: "",
+  messages: [],
+  ws: {}
+})
+// @ts-ignore
+window.Spruce.store("page", {
+  name: "toRoom"
+})
+
+</script>
+</body>
+</html>
