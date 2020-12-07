@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.css">
+
+<link href="https://fonts.googleapis.com/css2?family=Sawarabi+Mincho&display=swap" rel="stylesheet">
 
 <script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.7.0/dist/alpine.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@ryangjchandler/spruce@2.x.x/dist/spruce.umd.js"></script>
@@ -10,28 +11,76 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/1.30.1/date_fns.min.js" integrity="sha512-F+u8eWHrfY8Xw9BLzZ8rG/0wIvs0y+JyRJrXjp3VjtFPylAEEGwKbua5Ip/oiVhaTDaDs4eU2Xtsxjs/9ag2bQ==" crossorigin="anonymous"></script>
 
 <link href="https://fonts.googleapis.com/css?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Two+Tone|Material+Icons+Round|Material+Icons+Sharp" rel="stylesheet">
+<!-- <link rel="preconnect" href="https://fonts.gstatic.com"> -->
+<link href="https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="./app.css">
 <style>
+
+@font-face {
+  font-family: 'mofuji';
+  src: url('./font/HuiFontP29.ttf') format('truetype');
+}
+
 html {
-  background-color: #F5F5F5;
+  background-color: #f0f0f0;
 }
+body {
+  margin: 0;
+  padding: 0;
+}
+textarea {
+  resize: vertical;
+  background-color: transparent;
+  border:solid 1px #666;
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+}
+* {
+  font-family: "mofuji", "Sawarabi Mincho", "Mulish", sans-serif;
+  box-sizing: border-box;
+}
+
+/*  */
 .container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  border: 1px solid #808080;
+}
+.container .center {
+  width: 50vw;
+  height: 20vw;
+}
+.container .center label,
+.container .center input,
+.container .center button {
+  display: block;
   width: 100%;
-  margin: 1em 0;
-  /* overflow: auto; */
-  /* border: 1px solid #d8d8d8; */
-  /* background-color: #fff; */
 }
 
-/* custom frappe-gant class */
-.gantt {
-  margin-top: 3em;
+/*  */
+.items {
+  display: flex;
+  justify-content: space-evenly;
 }
-text.bar-label {
-  font-family: sans-serif;
+.items .item {
+  width: 24%;
 }
+.items .item label,
+.items .item textarea {
+  display: block;
+  width: 100%;
+}
+.card {
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  width: 100%;
+  margin: 16px 0 0 0;
 
+  border: solid 2px #666;
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+}
 </style>
 
 </head>
@@ -39,68 +88,64 @@ text.bar-label {
 
   <div x-data="toRoom()" x-init="init()">
     <template x-if="$store.page.name === 'toRoom'">
-      <div>
-        <span><label for="roomkey">Room Key</label><input type="text" x-model="$store.room.key" id="roomKey" /></span>
-        <span><label for="username">Username</label><input type="text" x-model="$store.room.username" id="username" /></span>
-        <button @click="toKpt()">Enter</button>
+      <div class="container">
+        <div class="center">
+          <label class="label" for="username">Username</label>
+          <input class="input" type="text" x-model="$store.room.username" id="username" />
+          <label class="label" for="roomkey">Room Key</label>
+          <input class="input" type="text" x-model="$store.room.key" id="roomKey" />
+          <button class="button is-info is-fullwidth" @click="toKpt()">Enter</button>
+        </div>
       </div>
     </template>
   </div>
 
   <div x-data="keprotry()" x-init="init()">
     <template x-if="$store.page.name === 'KPT'">
-      <div>
-        <div x-text="$store.room.key"></div>
-        <div x-text="$store.room.username"></div>
-        
-        <div>
-          <div>
-            <input type="text" x-model="newKeepMessage" placeholder="I need to..." @keydown.enter="sendMessage('keep')">
-          </div>
-          <div>
-            <template x-for="(message, index) in $store.room.messages" :key="message.id">
-              <div>
-                <template x-if="message.lane_name === 'keep'">
-                  <div>
-                    <span @click="deleteMessage(message.id)">×</span><span x-text="message.message"></span>
-                  </div>
-                </template>
-              </div>
-            </template>
-          </div>
+      <div class="items">
+
+        <div class="item">
+          <textarea class="" type="text" x-model="newKeepMessage" placeholder="Keep ..." @keydown.shift.enter="sendMessage('keep')"></textarea>
+          <template x-for="(message, index) in $store.room.messages" :key="message.id">
+            <div>
+              <template x-if="message.lane_name === 'keep'">
+                <div class="card">
+                  <div @click="deleteMessage(message.id)">x</div>
+                  <div x-text="message.message"></div>
+                </div>
+              </template>
+            </div>
+          </template>
         </div>
-        <div>
-          <div>
-            <input type="text" x-model="newProblemMessage" placeholder="I need to..." @keydown.enter="sendMessage('problem')">
-          </div>
-          <div>
-            <template x-for="(message, index) in $store.room.messages" :key="message.id">
-              <div>
-                <template x-if="message.lane_name === 'problem'">
-                  <div>
-                    <span @click="deleteMessage(message.id)">×</span><span x-text="message.message"></span>
-                  </div>
-                </template>
-              </div>
-            </template>
-          </div>
+
+        <div class="item">
+          <textarea id="keep" class="" type="text" x-model="newProblemMessage" placeholder="Problem ..." @keydown.shift.enter="sendMessage('problem')"></textarea>
+          <template x-for="(message, index) in $store.room.messages" :key="message.id">
+            <div>
+              <template x-if="message.lane_name === 'problem'">
+                <div class="card">
+                  <div @click="deleteMessage(message.id)">x</div>
+                  <div x-text="message.message"></div>
+                </div>
+              </template>
+            </div>
+          </template>
         </div>
-        <div>
-          <div>
-            <input type="text" x-model="newTryMessage" placeholder="I need to..." @keydown.enter="sendMessage('try')">
-          </div>
-          <div>
-            <template x-for="(message, index) in $store.room.messages" :key="message.id">
-              <div>
-                <template x-if="message.lane_name === 'try'">
-                  <div>
-                    <span @click="deleteMessage(message.id)">×</span><span x-text="message.message"></span>
-                  </div>
-                </template>
-              </div>
-            </template>
-          </div>
+
+        <div class="item">
+          <textarea id="problem" class="" type="text" x-model="newTryMessage" placeholder="Try ..." @keydown.shift.enter="sendMessage('try')"></textarea>
+          <template x-for="(message, index) in $store.room.messages" :key="message.id">
+            <div>
+              <template x-if="message.lane_name === 'try'">
+                <div class="card">
+                  <div @click="deleteMessage(message.id)">x</div>
+                  <div x-text="message.message"></div>
+                </div>
+              </template>
+            </div>
+          </template>
         </div>
+
       </div>
     </template>
   </div>
@@ -224,24 +269,26 @@ function keprotry() {
           break
       }
 
-      const body = {
-        "query": createMessage,
-        "variables": {
-          message: m,
-          room_key: this.$store.room.key,
-          username: this.$store.room.username,
-          lane_name: laneName
-        }
-      }
-      console.log(body)
-
-      // @ts-ignore
-      const data = await axios.post(API_URL, body, {
-          headers: {
-            "Content-Type": "application/json"
+      if (m !== "") {
+        const body = {
+          "query": createMessage,
+          "variables": {
+            message: m,
+            room_key: this.$store.room.key,
+            username: this.$store.room.username,
+            lane_name: laneName
           }
-      })
-      console.log(data)
+        }
+        console.log(body)
+
+        // @ts-ignore
+        const data = await axios.post(API_URL, body, {
+            headers: {
+              "Content-Type": "application/json"
+            }
+        })
+        console.log(data)
+      }
 
       this.newKeepMessage = "";
       this.newProblemMessage = "";
@@ -250,7 +297,7 @@ function keprotry() {
     async deleteMessage (id) {
       // UI から削除
       // ここで制御ではなく、onmessage 内の filter 使っているあたりで一緒にできると良いのかも
-      this.messages = this.messages.filter(e => e.id !== id)
+      this.$store.room.messages = this.$store.room.messages.filter(e => e.id !== id)
       // DB から削除
       console.log({id})
       const deletePost = `
